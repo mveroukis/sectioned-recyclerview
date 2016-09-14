@@ -35,6 +35,7 @@ public abstract class SectionedRecyclerViewAdapter<VH extends RecyclerView.ViewH
 
     public abstract void onBindViewHolder(VH holder, int section, int relativePosition, int absolutePosition);
 
+    @SuppressWarnings("WeakerAccess")
     public final boolean isHeader(int position) {
         return mHeaderLocationMap.get(position) != null;
     }
@@ -64,15 +65,43 @@ public abstract class SectionedRecyclerViewAdapter<VH extends RecyclerView.ViewH
         });
     }
 
-    @SuppressWarnings("UnusedParameters")
+    @SuppressWarnings({"UnusedParameters", "WeakerAccess", "SameReturnValue"})
     protected int getRowSpan(int fullSpanSize, int section, int relativePosition, int absolutePosition) {
         return 1;
     }
 
+
+    @SuppressWarnings("WeakerAccess")
+    public int getPositionFromSectionPosition(int sectionPosition)
+    {
+        int count = 0;
+
+        for (int s = 0; s < sectionPosition; s++) {
+            int itemCount = getItemCount(s);
+
+            if (mShowHeadersForEmptySections || (itemCount > 0)) {
+                count += itemCount + 1;
+            }
+        }
+
+        return count;
+    }
+
+
+    public int getPositionFromSectionAndItemPositions(int sectionPosition, int itemPosition)
+    {
+        int count = getPositionFromSectionPosition(sectionPosition);
+
+        return count + itemPosition + 1; // Not sure why we need to add 1 to this, but it's required.
+    }
+
+
     // returns section along with offsetted position
-    private int[] getSectionIndexAndRelativePosition(int itemPosition) {
+    @SuppressWarnings("WeakerAccess")
+    public int[] getSectionIndexAndRelativePosition(int itemPosition) {
+        Integer lastSectionIndex = -1;
+
         synchronized (mHeaderLocationMap) {
-            Integer lastSectionIndex = -1;
             for (final Integer sectionIndex : mHeaderLocationMap.keySet()) {
                 if (itemPosition > sectionIndex) {
                     lastSectionIndex = sectionIndex;
@@ -80,8 +109,12 @@ public abstract class SectionedRecyclerViewAdapter<VH extends RecyclerView.ViewH
                     break;
                 }
             }
-            return new int[]{mHeaderLocationMap.get(lastSectionIndex), itemPosition - lastSectionIndex - 1};
         }
+
+        int sectionIndex = mHeaderLocationMap.get(lastSectionIndex);
+        int itemIndex = itemPosition - lastSectionIndex - 1;
+
+        return new int[]{sectionIndex, itemIndex};
     }
 
     @Override
@@ -116,7 +149,7 @@ public abstract class SectionedRecyclerViewAdapter<VH extends RecyclerView.ViewH
         }
     }
 
-    @SuppressWarnings("UnusedParameters")
+    @SuppressWarnings({"UnusedParameters", "WeakerAccess"})
     @IntRange(from = 0, to = Integer.MAX_VALUE)
     public int getHeaderViewType(int section) {
         //noinspection ResourceType
@@ -134,9 +167,10 @@ public abstract class SectionedRecyclerViewAdapter<VH extends RecyclerView.ViewH
      * @hide
      * @deprecated
      */
+    //@Deprecated
+
     @Override
-    @Deprecated
-    public final void onBindViewHolder(VH holder, int position) {
+    public void onBindViewHolder(RecyclerView.ViewHolder holder, int position) {
         StaggeredGridLayoutManager.LayoutParams layoutParams = null;
         if (holder.itemView.getLayoutParams() instanceof GridLayoutManager.LayoutParams)
             layoutParams = new StaggeredGridLayoutManager.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
@@ -144,12 +178,12 @@ public abstract class SectionedRecyclerViewAdapter<VH extends RecyclerView.ViewH
             layoutParams = (StaggeredGridLayoutManager.LayoutParams) holder.itemView.getLayoutParams();
         if (isHeader(position)) {
             if (layoutParams != null) layoutParams.setFullSpan(true);
-            onBindHeaderViewHolder(holder, mHeaderLocationMap.get(position));
+            onBindHeaderViewHolder((VH)holder, mHeaderLocationMap.get(position));
         } else {
             if (layoutParams != null) layoutParams.setFullSpan(false);
             final int[] sectionAndPos = getSectionIndexAndRelativePosition(position);
             final int absPos = position - (sectionAndPos[0] + 1);
-            onBindViewHolder(holder, sectionAndPos[0],
+            onBindViewHolder((VH)holder, sectionAndPos[0],
                     // offset section view positions
                     sectionAndPos[1], absPos);
         }
@@ -161,7 +195,8 @@ public abstract class SectionedRecyclerViewAdapter<VH extends RecyclerView.ViewH
      * @hide
      * @deprecated
      */
-    @Deprecated
+    //@Deprecated
+
     @Override
     public final void onBindViewHolder(VH holder, int position, List<Object> payloads) {
         super.onBindViewHolder(holder, position, payloads);
